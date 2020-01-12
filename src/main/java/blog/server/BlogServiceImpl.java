@@ -1,15 +1,15 @@
 package blog.server;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import com.proto.blog.Blog;
-import com.proto.blog.BlogServiceGrpc;
-import com.proto.blog.CreateBlogRequest;
-import com.proto.blog.CreateBlogResponse;
+import com.mongodb.client.*;
+import com.proto.blog.*;
+import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 import org.bson.Document;
+import org.bson.types.ObjectId;
+
+import javax.print.Doc;
+
+import static com.mongodb.client.model.Filters.eq;
 
 public class BlogServiceImpl extends BlogServiceGrpc.BlogServiceImplBase {
 
@@ -34,6 +34,47 @@ public class BlogServiceImpl extends BlogServiceGrpc.BlogServiceImplBase {
 
         responseObserver.onNext(blogResponse);
         responseObserver.onCompleted();
+
+    }
+
+    @Override
+    public void readBlog(ReadBlogRequest request, StreamObserver<ReadBlogResponse> responseObserver) {
+        String blogId = request.getId();
+        Document doc = collection.find(eq("_id", new ObjectId(blogId))).first();
+        if(doc == null) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription("Document you are looing for is not found.").asException());
+        } else {
+            Blog blog = Blog.newBuilder()
+                    .setId(doc.get("_id").toString())
+                    .setAuthorId(doc.getString("author_id"))
+                    .setContent(doc.getString("content"))
+                    .setTitle(doc.getString("title"))
+                    .build();
+            responseObserver.onNext(ReadBlogResponse.newBuilder().setBlog(blog).build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Override
+    public void updateBlog(UpdateBlogRequest request, StreamObserver<UpdateBlogResponse> responseObserver) {
+        Blog requestBlog = request.getBlog();
+        String blogId = requestBlog.getId();
+        Document doc = collection.find(eq("_id", new ObjectId(blogId))).first();
+
+        if(doc == null) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription("Document you are looing for is not found.").asException());
+        } else {
+
+            Document updatedDoc = new Document("author_id", requestBlog.getAuthorId())
+                    .append("title", requestBlog.getTitle())
+                    .append("content", requestBlog.getContent());
+
+
+            collection.replaceOne(doc, updatedDoc);
+
+            responseObserver.onNext(UpdateBlogResponse.newBuilder().setBlog(requestBlog).build());
+            responseObserver.onCompleted();
+        }
 
     }
 }
