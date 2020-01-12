@@ -29,5 +29,8 @@ public class BlogClient {
         ReadBlogResponse readBlogResponse = blogClient
                 .readBlog(ReadBlogRequest.newBuilder().setId(blogId).build());
         System.out.println("Read blog result = " + readBlogResponse);
+
+        DeleteBlogResponse deleteBlogResponse = blogClient.deleteBlog(DeleteBlogRequest.newBuilder().setId(blogId).build());
+        System.out.println("Blog deleted with id = " + deleteBlogResponse.getId());
     }
 }

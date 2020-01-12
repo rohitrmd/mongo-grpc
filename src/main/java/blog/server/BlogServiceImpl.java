@@ -1,6 +1,7 @@
 package blog.server;
 
 import com.mongodb.client.*;
+import com.mongodb.client.result.DeleteResult;
 import com.proto.blog.*;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -74,6 +75,24 @@ public class BlogServiceImpl extends BlogServiceGrpc.BlogServiceImplBase {
 
             responseObserver.onNext(UpdateBlogResponse.newBuilder().setBlog(requestBlog).build());
             responseObserver.onCompleted();
+        }
+    }
+
+    @Override
+    public void deleteBlog(DeleteBlogRequest request, StreamObserver<DeleteBlogResponse> responseObserver) {
+        String blogId = request.getId();
+        Document doc = collection.find(eq("_id", new ObjectId(blogId))).first();
+
+        if(doc == null) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription("Document you are looing for is not found.").asException());
+        } else {
+            DeleteResult response = collection.deleteOne(eq("_id", new ObjectId(blogId)));
+            if(response.wasAcknowledged()) {
+                responseObserver.onNext(DeleteBlogResponse.newBuilder().setId(blogId).build());
+                responseObserver.onCompleted();
+            } else {
+                responseObserver.onError(Status.INTERNAL.withDescription("Document deletion operation failed.").asException());
+            }
         }
 
     }
