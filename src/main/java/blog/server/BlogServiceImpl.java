@@ -45,15 +45,19 @@ public class BlogServiceImpl extends BlogServiceGrpc.BlogServiceImplBase {
         if(doc == null) {
             responseObserver.onError(Status.NOT_FOUND.withDescription("Document you are looing for is not found.").asException());
         } else {
-            Blog blog = Blog.newBuilder()
-                    .setId(doc.get("_id").toString())
-                    .setAuthorId(doc.getString("author_id"))
-                    .setContent(doc.getString("content"))
-                    .setTitle(doc.getString("title"))
-                    .build();
+            Blog blog = documentToBlog(doc);
             responseObserver.onNext(ReadBlogResponse.newBuilder().setBlog(blog).build());
             responseObserver.onCompleted();
         }
+    }
+
+    private Blog documentToBlog(Document doc) {
+        return Blog.newBuilder()
+                .setId(doc.get("_id").toString())
+                .setAuthorId(doc.getString("author_id"))
+                .setContent(doc.getString("content"))
+                .setTitle(doc.getString("title"))
+                .build();
     }
 
     @Override
@@ -95,5 +99,15 @@ public class BlogServiceImpl extends BlogServiceGrpc.BlogServiceImplBase {
             }
         }
 
+    }
+
+    @Override
+    public void listBlog(ListBlogRequest request, StreamObserver<ListBlogResponse> responseObserver) {
+        collection.find().iterator().forEachRemaining(document -> {
+            responseObserver.onNext(
+                    ListBlogResponse.newBuilder().setBlog(documentToBlog(document)).build()
+            );
+        });
+        responseObserver.onCompleted();
     }
 }
